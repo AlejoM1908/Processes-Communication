@@ -4,13 +4,12 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
-#define RAND_MAX 10
 
 char* generateData(int kbNum) {
     int bytes = 1024 * kbNum;
     char* data = malloc(bytes);
 
-    for (int i = 0; i<bytes; i++) data[i] = (char) (rand() + 97);
+    for (int i = 0; i<bytes; i++) data[i] = '*';
 
     return data;
 }
@@ -20,16 +19,19 @@ void errorMessage(const char *message){
     exit(1);
 }
 
-void printTimes(clock_t* times){
+void printTimes(time_t* times){
     int fileSize = 1;
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %l", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %l", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMb fue de %f usando tuberias\n", fileSize, times[i]);
+        else printf("El tiempo para %dKb fue de %f usando tuberias\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
-        else fileSize = 1;
+        else {
+            fileSize = 1;
+            bigger = true;
+        }
     }
 }
 
@@ -54,29 +56,28 @@ void childrenProcess(int pipeWrite, int pipeRead){
         char* data = malloc(1024 * i);
 
         // Get Data Package
-        read(pipeRead, data, sizeof(data));
+        read(pipeRead, &data, sizeof(data));
 
         // Sending check
         write(pipeWrite, &check, sizeof(int));
-        free(data);
     }
 }
 
 void parentProcess(int pipeWrite, int pipeRead){
-    clock_t times [6];
+    time_t times [6];
     int index = 0;
 
     for (int i = 1; i < 100001; i = i * 10){
         char* data = generateData(i);
-        clock_t startingTime = clock();
+        time_t startingTime = time(NULL)*1000;
         int dataCheck;
 
         // Sending Data Package to consumer
-        write(pipeWrite, data, sizeof(data));
+        write(pipeWrite, &data, sizeof(data));
         read(pipeRead, &dataCheck, sizeof(dataCheck));
 
         // Get the time elapsed time
-        clock_t finishingTime = clock();
+        time_t finishingTime = time(NULL)*1000;
         times[index] = finishingTime - startingTime;
         index++;
         free(data);
@@ -90,17 +91,18 @@ void startProgram(){
     pid_t processId = 0;
 
     // Creating emparented processes and pipes
-    processId = fork();
     pipePointers[0] = pipe(parentPipes);
     pipePointers[1] = pipe(childrenPipes);
+    processId = fork();
     checkErrors(processId, pipePointers);
 
-    // Splitting the code for each process
-    if (processId == 0){ 
+    // Spliting the code that witch process will execute
+    if (processId == 0){
         close(childrenPipes[0]);
         close(parentPipes[1]);
         childrenProcess(childrenPipes[1], parentPipes[0]);
-    } else {
+    }
+    else if (processId > 0){
         close(childrenPipes[1]);
         close(parentPipes[0]);
         parentProcess(parentPipes[1], childrenPipes[0]);
