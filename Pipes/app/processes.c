@@ -4,106 +4,166 @@
 #include <string.h>
 #include <stdbool.h>
 #include <sys/time.h>
+#include <time.h>
+#include <stdarg.h>
 
-char* generateData(int dataSize) {
-    int bytes = dataSize * 1024;
-    char* data = malloc(bytes);
+void errorMessage(const char *message, ...)
+{
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    exit(1);
+}
 
-    for (int i = 0; i<bytes; i++) data[i] = '*';
+char *generateData(int kbNum)
+{
+    int bytes = 1000 * kbNum;
+    char *data = malloc(bytes);
+
+    if (data == NULL)
+        errorMessage("failed to allocate %d bytes of memory\n", bytes);
+
+    memset(data, '*', bytes);
 
     return data;
 }
 
-void errorMessage(const char *message){
-    printf(message);
-    exit(1);
-}
-
-void printTimes(double* times){
+void printTimes(long int *times)
+{
     int fileSize = 1;
     bool bigger = false;
 
-    for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %lf milisegundos usando tuberias\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %lf milisegundos usando tuberias\n", fileSize, times[i]);
+    for (int i = 0; i < 6; i++)
+    {
+        if (bigger)
+        {
+            printf("El tiempo para %dMB fue de %ld μs usando tuberias\n", fileSize, times[i]);
+        }
+        else
+        {
+            printf("El tiempo para %dKB fue de %ld μs usando tuberias\n", fileSize, times[i]);
+        }
 
-        if (fileSize < 100) fileSize = fileSize * 10;
-        else {
+        if (fileSize < 100)
+        {
+            fileSize = fileSize * 10;
+        }
+        else
+        {
             fileSize = 1;
             bigger = true;
         }
     }
 }
 
-void checkErrors(int processId, int pipesPointers[2]){
-    for (int i=0; i<2; i++){
-        if (pipesPointers[i] < 0){
+void checkErrors(int processId, int pipesPointers[2])
+{
+    for (int i = 0; i < 2; i++)
+    {
+        if (pipesPointers[i] < 0)
+        {
             // Generating the corresponding error message for pipe error
             char message[] = "Error starting the pipe ";
-            strcat(message, (char*) &i);
+            strcat(message, (char *)&i);
             errorMessage(message);
         }
     }
 
     // Generating the corresponding error message for the fork
-    if (processId < 0) errorMessage("Error generating the fork");
+    if (processId < 0)
+        errorMessage("Error generating the fork");
 }
 
-void childrenProcess(int pipeWrite, int pipeRead){
-    int check = 1, average = 5;
+ssize_t multi_read(int fd, char *buffer, size_t nbytes)
+{
+    ssize_t nb = 0;
+    size_t nleft = nbytes;
+    ssize_t tbytes = 0;
+    while (nleft > 0 && (nb = read(fd, buffer, nleft)) > 0)
+    {
+        tbytes += nb;
+        buffer += nb;
+        nleft  -= nb;
+    }
+    if (tbytes == 0)
+        tbytes = nb;
+    return tbytes;
+}
 
-    for (int i = 0; i < 100001; i = i * 10){
-        char* data;
-        int dataSize = 1024 * i;
+ssize_t multi_write(int fd, const char *buffer, size_t nbytes)
+{
+    ssize_t nb = 0;
+    size_t nleft = nbytes;
+    ssize_t tbytes = 0;
+    while (nleft > 0 && (nb = write(fd, buffer, nleft)) > 0)
+    {
+        tbytes += nb;
+        buffer += nb;
+        nleft  -= nb;
+    }
+    if (tbytes == 0)
+        tbytes = nb;
+    return tbytes;
+}
+
+void childProcess(int pipeWrite, int pipeRead)
+{
+    int check = 1;
+
+    for (int i = 1; i < 100001; i = i * 10)
+    {
+        size_t size = 1000 * i;
+        char *data = malloc(size);
+
+        if (data == NULL)
+            errorMessage("failed to allocate memory\n");
+
 
         // Get Data Package
-        read(pipeRead, &data, sizeof(data));
+        if (multi_read(pipeRead, data, size) != (ssize_t)size)
+            errorMessage("Read error in %s()\n", __func__);
 
         // Sending check
-        write(pipeWrite, &check, sizeof(check));
-
-        // Restart sequence
-        if (i == 100000 && average > 0) {
-            average--;
-            i = 1;
-        }
+        if (write(pipeWrite, &check, sizeof(check)) != sizeof(check))
+            errorMessage("Write error in %s()\n", __func__);
     }
 }
 
-void parentProcess(int pipeWrite, int pipeRead){
-    struct timeval start, end;
-    double times [6];
-    int index = 0, average = 5;
+void parentProcess(int pipeWrite, int pipeRead)
+{
+    struct timeval start, stop;
+    long int times[6];
+    int index = 0;
 
-    for (int i = 1; i < 100001; i = i * 10){
-        char* data = generateData(i);
-        gettimeofday(&start, 0);
-        int dataCheck;
+    for (int i = 1; i < 100001; i = i * 10)
+    {
+        size_t size = 1000 * i;
+        char *data = generateData(i);
+        gettimeofday(&start, NULL);
+        int check;
 
         // Sending Data Package to consumer
-        write(pipeWrite, &data, sizeof(data));
-        read(pipeRead, &dataCheck, sizeof(dataCheck));
+        if (multi_write(pipeWrite, data, size) != (ssize_t)size)
+            errorMessage("Write error in %s()\n", __func__);
+
+        // Getting the check confirmation
+        if (read(pipeRead, &check, sizeof(check)) != sizeof(check))
+            errorMessage("Read error in %s()\n", __func__);
 
         // Get the time elapsed time
-        free(data);
-        gettimeofday(&end, 0);
-        double newTime = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
-        if (average == 5) times[index] = newTime;
-        else times[index] = (times[index] + newTime)/2;
-        index++;
+        gettimeofday(&stop, NULL);
 
-        // Restart sequence
-        if (index == 6 && average > 0){
-            average--;
-            index = 0;
-            i = 1;
-        }
+        times[index] = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
+        index++;
+        free(data);
     }
 
     printTimes(times);
 }
 
-void startProgram(){
+void startProgram(void)
+{
     int pipePointers[2], parentPipes[2], childrenPipes[2];
     pid_t processId = 0;
 
@@ -114,15 +174,21 @@ void startProgram(){
     checkErrors(processId, pipePointers);
 
     // Spliting the code that witch process will execute
-    if (processId == 0){
+    if (processId == 0)
+    {
         close(childrenPipes[0]);
         close(parentPipes[1]);
-        childrenProcess(childrenPipes[1], parentPipes[0]);
+        childProcess(childrenPipes[1], parentPipes[0]);
+        close(childrenPipes[1]);
+        close(parentPipes[0]);
     }
-    else if (processId > 0){
+    else if (processId > 0)
+    {
         close(childrenPipes[1]);
         close(parentPipes[0]);
         parentProcess(parentPipes[1], childrenPipes[0]);
+        close(childrenPipes[0]);
+        close(parentPipes[1]);
     }
 }
 
