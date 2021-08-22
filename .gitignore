@@ -1,1 +1,4 @@
 .vscode
+.fuse*
+Pipes/app/processes
+processes

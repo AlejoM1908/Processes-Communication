@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <time.h>
+#include <sys/time.h>
 
-char* generateData(int kbNum) {
-    int bytes = 1024 * kbNum;
+char* generateData(int dataSize) {
+    int bytes = dataSize * 1024;
     char* data = malloc(bytes);
 
     for (int i = 0; i<bytes; i++) data[i] = '*';
@@ -19,13 +19,13 @@ void errorMessage(const char *message){
     exit(1);
 }
 
-void printTimes(time_t* times){
+void printTimes(double* times){
     int fileSize = 1;
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %f usando tuberias\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %f usando tuberias\n", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMb fue de %lf milisegundos usando tuberias\n", fileSize, times[i]);
+        else printf("El tiempo para %dKb fue de %lf milisegundos usando tuberias\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
         else {
@@ -53,23 +53,25 @@ void childrenProcess(int pipeWrite, int pipeRead){
     int check = 1;
 
     for (int i = 0; i < 100001; i = i * 10){
-        char* data = malloc(1024 * i);
+        char* data;
+        int dataSize = 1024 * i;
 
         // Get Data Package
         read(pipeRead, &data, sizeof(data));
 
         // Sending check
-        write(pipeWrite, &check, sizeof(int));
+        write(pipeWrite, &check, sizeof(check));
     }
 }
 
 void parentProcess(int pipeWrite, int pipeRead){
-    time_t times [6];
+    struct timeval start, end;
+    double times [6];
     int index = 0;
 
     for (int i = 1; i < 100001; i = i * 10){
         char* data = generateData(i);
-        time_t startingTime = time(NULL)*1000;
+        gettimeofday(&start, 0);
         int dataCheck;
 
         // Sending Data Package to consumer
@@ -77,10 +79,10 @@ void parentProcess(int pipeWrite, int pipeRead){
         read(pipeRead, &dataCheck, sizeof(dataCheck));
 
         // Get the time elapsed time
-        time_t finishingTime = time(NULL)*1000;
-        times[index] = finishingTime - startingTime;
-        index++;
         free(data);
+        gettimeofday(&end, 0);
+        times[index] = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
+        index++;
     }
 
     printTimes(times);
