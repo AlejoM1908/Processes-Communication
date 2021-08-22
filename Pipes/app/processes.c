@@ -50,7 +50,7 @@ void checkErrors(int processId, int pipesPointers[2]){
 }
 
 void childrenProcess(int pipeWrite, int pipeRead){
-    int check = 1;
+    int check = 1, average = 5;
 
     for (int i = 0; i < 100001; i = i * 10){
         char* data;
@@ -61,13 +61,19 @@ void childrenProcess(int pipeWrite, int pipeRead){
 
         // Sending check
         write(pipeWrite, &check, sizeof(check));
+
+        // Restart sequence
+        if (i == 100000 && average > 0) {
+            average--;
+            i = 1;
+        }
     }
 }
 
 void parentProcess(int pipeWrite, int pipeRead){
     struct timeval start, end;
     double times [6];
-    int index = 0;
+    int index = 0, average = 5;
 
     for (int i = 1; i < 100001; i = i * 10){
         char* data = generateData(i);
@@ -81,8 +87,17 @@ void parentProcess(int pipeWrite, int pipeRead){
         // Get the time elapsed time
         free(data);
         gettimeofday(&end, 0);
-        times[index] = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
+        double newTime = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
+        if (average == 5) times[index] = newTime;
+        else times[index] = (times[index] + newTime)/2;
         index++;
+
+        // Restart sequence
+        if (index == 6 && average > 0){
+            average--;
+            index = 0;
+            i = 1;
+        }
     }
 
     printTimes(times);

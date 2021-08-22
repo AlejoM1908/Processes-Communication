@@ -43,7 +43,7 @@ void checkErrors(int processId){
 }
 
 void childrenProcess(){
-    int check = 1, socket = clientConnection();
+    int check = 1, socket = clientConnection(), average = 5;
 
     for (int i = 0; i < 100001; i = i * 10){
         char* data;
@@ -54,6 +54,12 @@ void childrenProcess(){
 
         // Sending check
         send(socket, &check, sizeof(check), 0);
+
+        // Restart sequence
+        if (i == 100000 && average > 0) {
+            average--;
+            i = 1;
+        }
     }
 }
 
