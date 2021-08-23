@@ -29,28 +29,18 @@ char *generateData(int kbNum)
     return data;
 }
 
-void printTimes(long int *times)
+void printTimes(long *times)
 {
     int fileSize = 1;
     bool bigger = false;
 
     for (int i = 0; i < 6; i++)
     {
-        if (bigger)
-        {
-            printf("El tiempo para %dMB fue de %ld μs usando tuberias\n", fileSize, times[i]);
-        }
-        else
-        {
-            printf("El tiempo para %dKB fue de %ld μs usando tuberias\n", fileSize, times[i]);
-        }
+        if (bigger) printf("El tiempo para %dMB fue de %ld μs usando tuberias\n", fileSize, times[i]);
+        else printf("El tiempo para %dKB fue de %ld μs usando tuberias\n", fileSize, times[i]);
 
-        if (fileSize < 100)
-        {
-            fileSize = fileSize * 10;
-        }
-        else
-        {
+        if (fileSize < 100) fileSize = fileSize * 10;
+        else{
             fileSize = 1;
             bigger = true;
         }
@@ -109,7 +99,7 @@ ssize_t multi_write(int fd, const char *buffer, size_t nbytes)
 
 void childProcess(int pipeWrite, int pipeRead)
 {
-    int check = 1;
+    int check = 1, average = 5;
 
     for (int i = 1; i < 100001; i = i * 10)
     {
@@ -127,14 +117,20 @@ void childProcess(int pipeWrite, int pipeRead)
         // Sending check
         if (write(pipeWrite, &check, sizeof(check)) != sizeof(check))
             errorMessage("Write error in %s()\n", __func__);
+
+        // Restart sequence
+        if (i > 10000 && average > 0){
+            average--;
+            i = 1;
+        }
     }
 }
 
 void parentProcess(int pipeWrite, int pipeRead)
 {
     struct timeval start, stop;
-    long int times[6];
-    int index = 0;
+    long times[6];
+    int index = 0, average = 5;
 
     for (int i = 1; i < 100001; i = i * 10)
     {
@@ -153,10 +149,19 @@ void parentProcess(int pipeWrite, int pipeRead)
 
         // Get the time elapsed time
         gettimeofday(&stop, NULL);
-
-        times[index] = (stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec;
+        long newTime = ((stop.tv_sec - start.tv_sec) * 1e6) + (stop.tv_usec - start.tv_usec);
+        if (newTime == 0) newTime = 1;
+        if (average == 5) times[index] = newTime;
+        else times[index] = ceil((times[index] + newTime) / 2);
         index++;
         free(data);
+
+        // Restart sequence
+        if (index > 5 && average > 0){
+            average--;
+            index = 0;
+            i = 1;
+        }
     }
 
     printTimes(times);

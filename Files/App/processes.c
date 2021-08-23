@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <math.h>
 #include "../util/file_manager.c"
 
 pthread_mutex_t mutex;
@@ -24,13 +25,13 @@ void errorMessage(const char *message){
     exit(1);
 }
 
-void printTimes(double* times){
+void printTimes(long* times){
     int fileSize = 1;
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %lf milisegundos usando archivos\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %lf milisegundos usando archivos\n", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMb fue de %ld μs usando archivos\n", fileSize, times[i]);
+        else printf("El tiempo para %dKb fue de %ld μs usando archivos\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
         else {
@@ -38,6 +39,8 @@ void printTimes(double* times){
             bigger = true;
         }
     }
+
+    printf("\n\n");
 }
 
 void checkErrors(int processId, int mutexCheck, int escritoCheck, int leidoCheck){
@@ -72,7 +75,7 @@ void childrenProcess(char* route){
 
 void parentProcess(char* route){
     struct timeval start, end;
-    double times [6];
+    long times [6];
     int index = 0, average = 5;
 
     for (int i = 1; i < 100001; i = i * 10){
@@ -88,9 +91,10 @@ void parentProcess(char* route){
         // Get the time elapsed time
         free(data);
         gettimeofday(&end, 0);
-        double newTime = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
+        long newTime = ((end.tv_sec - start.tv_sec) * 1e6) + (end.tv_usec - start.tv_usec);
+        if (newTime == 0) newTime = 1;
         if (average == 5) times[index] = newTime;
-        else times[index] = (times[index] + newTime)/2;
+        else times[index] = ceil((times[index] + newTime)/2);
         index++;
 
         // Restart sequence

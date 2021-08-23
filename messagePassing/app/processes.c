@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include "../util/network_connection.c"
@@ -21,13 +22,13 @@ void errorMessage(const char *message){
     exit(1);
 }
 
-void printTimes(double* times){
+void printTimes(long* times){
     int fileSize = 1;
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %lf milisegundos usando paso de mensajes\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %lf milisegundos usando paso de mensajes\n", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMb fue de %ld μs usando paso de mensajes\n", fileSize, times[i]);
+        else printf("El tiempo para %dKb fue de %ld μs usando paso de mensajes\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
         else {
@@ -45,7 +46,7 @@ void checkErrors(int processId){
 void childrenProcess(){
     int check = 1, socket = clientConnection(), average = 5;
 
-    for (int i = 0; i < 100001; i = i * 10){
+    for (int i = 1; i < 100001; i = i * 10){
         char* data;
         int dataSize = 1024 * i;
 
@@ -56,7 +57,7 @@ void childrenProcess(){
         send(socket, &check, sizeof(check), 0);
 
         // Restart sequence
-        if (i == 100000 && average > 0) {
+        if (i > 10000 && average > 0) {
             average--;
             i = 1;
         }
@@ -66,7 +67,7 @@ void childrenProcess(){
 void parentProcess(){
     struct client_data client = serverConnection();
     struct timeval start, end;
-    double times [6];
+    long times [6] = {0, 0, 0, 0, 0, 0};
     int index = 0, average = 5;
 
     for (int i = 1; i < 100001; i = i * 10){
@@ -81,13 +82,14 @@ void parentProcess(){
         // Get the time elapsed time
         free(data);
         gettimeofday(&end, 0);
-        double newTime = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
+        long newTime = ((end.tv_sec - start.tv_sec) * 1e6) + (end.tv_usec - start.tv_usec);
+        if (newTime == 0) newTime = 1;
         if (average == 5) times[index] = newTime;
-        else times[index] = (times[index] + newTime)/2;
+        else times[index] = ceil((times[index] + newTime)/2);
         index++;
 
         // Restart sequence
-        if (index == 6 && average > 0){
+        if (index > 5 && average > 0){
             average --;
             index = 0;
             i = 1;

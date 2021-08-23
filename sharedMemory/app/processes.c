@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <pthread.h>
@@ -26,13 +27,13 @@ void errorMessage(const char *message){
     exit(1);
 }
 
-void printTimes(double* times){
+void printTimes(long* times){
     int fileSize = 1;
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %lf milisegundos usando memoria compartida\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %lf milisegundos usando memoria compartida\n", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMb fue de %ld μs usando memoria compartida\n", fileSize, times[i]);
+        else printf("El tiempo para %dKb fue de %ld μs usando memoria compartida\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
         else {
@@ -59,10 +60,10 @@ void* createSharedMemory(size_t size){
     return mmap(NULL, size, protection, visibility, -1, 0);
 }
 
-void childrenProcess(void* sharedMemory){
+void childrenProcess(char* sharedMemory){
     int check = 1, average = 5;
 
-    for (int i = 0; i < 100001; i = i * 10){
+    for (int i = 1; i < 100001; i = i * 10){
         pthread_cond_wait(&lleno, &mutex);
         char* data;
         int dataSize = 1024 * i;
@@ -81,12 +82,12 @@ void childrenProcess(void* sharedMemory){
     }
 }
 
-void parentProcess(void* sharedMemory){
+void parentProcess(char* sharedMemory){
     struct timeval start, end;
-    double times [6] = {0, 0, 0, 0, 0, 0};
+    long times [6] = {0, 0, 0, 0, 0, 0};
     int index = 0, average = 5;
 
-    for (int i = 1; i < 100001; i = i * 10){
+    for (int i = 1; i < 1000001; i = i * 10){
         char* data = generateData(i);
         gettimeofday(&start, 0);
 
@@ -98,13 +99,14 @@ void parentProcess(void* sharedMemory){
         // Get the time elapsed time
         free(data);
         gettimeofday(&end, 0);
-        double newTime = ((end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)*1e-6)*1000;
+        long newTime = ((end.tv_sec - start.tv_sec) * 1e6) + (end.tv_usec - start.tv_usec);
+        if (newTime == 0) newTime++;
         if (average == 5) times[index] = newTime;
-        else times[index] = (times[index] + newTime)/2;
+        else times[index] = ceil((times[index] + newTime)/2);
         index++;
 
         // Restart sequence
-        if (index == 6 && average > 0) {
+        if (index > 5 && average > 0) {
             average --;
             index = 0;
             i = 1;
@@ -117,7 +119,7 @@ void parentProcess(void* sharedMemory){
 
 void startProgram(){
     pid_t processId = 0;
-    void* sharedMemory = createSharedMemory(102400000);
+    char* sharedMemory = createSharedMemory(102400000);
     int mutexCheck, vacioCheck, llenoCheck;
  
 
