@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <sys/time.h>
 #include <time.h>
+#include <math.h>
 #include <stdarg.h>
 
-void errorMessage(const char *message, ...)
-{
+void errorMessage(const char *message, ...){
     va_list args;
     va_start(args, message);
     vfprintf(stderr, message, args);
@@ -16,8 +16,7 @@ void errorMessage(const char *message, ...)
     exit(1);
 }
 
-char *generateData(int kbNum)
-{
+char *generateData(int kbNum){
     int bytes = 1000 * kbNum;
     char *data = malloc(bytes);
 
@@ -29,8 +28,7 @@ char *generateData(int kbNum)
     return data;
 }
 
-void printTimes(long *times)
-{
+void printTimes(long *times){
     int fileSize = 1;
     bool bigger = false;
 
@@ -47,8 +45,7 @@ void printTimes(long *times)
     }
 }
 
-void checkErrors(int processId, int pipesPointers[2])
-{
+void checkErrors(int processId, int pipesPointers[2]){
     for (int i = 0; i < 2; i++)
     {
         if (pipesPointers[i] < 0)
@@ -65,8 +62,7 @@ void checkErrors(int processId, int pipesPointers[2])
         errorMessage("Error generating the fork");
 }
 
-ssize_t multi_read(int fd, char *buffer, size_t nbytes)
-{
+ssize_t multi_read(int fd, char *buffer, size_t nbytes){
     ssize_t nb = 0;
     size_t nleft = nbytes;
     ssize_t tbytes = 0;
@@ -81,8 +77,7 @@ ssize_t multi_read(int fd, char *buffer, size_t nbytes)
     return tbytes;
 }
 
-ssize_t multi_write(int fd, const char *buffer, size_t nbytes)
-{
+ssize_t multi_write(int fd, const char *buffer, size_t nbytes){
     ssize_t nb = 0;
     size_t nleft = nbytes;
     ssize_t tbytes = 0;
@@ -97,12 +92,10 @@ ssize_t multi_write(int fd, const char *buffer, size_t nbytes)
     return tbytes;
 }
 
-void childProcess(int pipeWrite, int pipeRead)
-{
+void childProcess(int pipeWrite, int pipeRead){
     int check = 1, average = 5;
 
-    for (int i = 1; i < 100001; i = i * 10)
-    {
+    for (int i = 1; i < 100001; ){
         size_t size = 1000 * i;
         char *data = malloc(size);
 
@@ -117,6 +110,7 @@ void childProcess(int pipeWrite, int pipeRead)
         // Sending check
         if (write(pipeWrite, &check, sizeof(check)) != sizeof(check))
             errorMessage("Write error in %s()\n", __func__);
+        i = i * 10;
 
         // Restart sequence
         if (i > 10000 && average > 0){
@@ -126,14 +120,12 @@ void childProcess(int pipeWrite, int pipeRead)
     }
 }
 
-void parentProcess(int pipeWrite, int pipeRead)
-{
+void parentProcess(int pipeWrite, int pipeRead){
     struct timeval start, stop;
     long times[6];
     int index = 0, average = 5;
 
-    for (int i = 1; i < 100001; i = i * 10)
-    {
+    for (int i = 1; i < 100001; ){
         size_t size = 1000 * i;
         char *data = generateData(i);
         gettimeofday(&start, NULL);
@@ -154,6 +146,7 @@ void parentProcess(int pipeWrite, int pipeRead)
         if (average == 5) times[index] = newTime;
         else times[index] = ceil((times[index] + newTime) / 2);
         index++;
+        i = i * 10;
         free(data);
 
         // Restart sequence
@@ -167,8 +160,7 @@ void parentProcess(int pipeWrite, int pipeRead)
     printTimes(times);
 }
 
-void startProgram(void)
-{
+void startProgram(void){
     int pipePointers[2], parentPipes[2], childrenPipes[2];
     pid_t processId = 0;
 

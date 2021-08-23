@@ -56,7 +56,7 @@ void checkErrors(int processId, int mutexCheck, int escritoCheck, int leidoCheck
 void childrenProcess(char* route){
     int average = 5;
 
-    for (int i = 0; i < 100001; i = i * 10){
+    for (int i = 0; i < 100001; ){
         pthread_cond_wait(&escrito, &mutex);
         char* data;
         int dataSize = 1024 * i;
@@ -64,6 +64,7 @@ void childrenProcess(char* route){
         // Get Data Package
         loadFromFile(route);
         pthread_cond_signal(&leido);
+        i = i * 10;
 
         // Restart sequence
         if (i == 100000 && average > 0) {
@@ -78,7 +79,7 @@ void parentProcess(char* route){
     long times [6];
     int index = 0, average = 5;
 
-    for (int i = 1; i < 100001; i = i * 10){
+    for (int i = 1; i < 100001; ){
         char* data = generateData(i);
         gettimeofday(&start, 0);
         int dataCheck;
@@ -96,6 +97,7 @@ void parentProcess(char* route){
         if (average == 5) times[index] = newTime;
         else times[index] = ceil((times[index] + newTime)/2);
         index++;
+        i = i * 10;
 
         // Restart sequence
         if (index == 6 && average > 0){

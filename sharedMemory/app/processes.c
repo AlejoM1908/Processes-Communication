@@ -63,7 +63,7 @@ void* createSharedMemory(size_t size){
 void childrenProcess(char* sharedMemory){
     int check = 1, average = 5;
 
-    for (int i = 1; i < 100001; i = i * 10){
+    for (int i = 1; i < 100001; ){
         pthread_cond_wait(&lleno, &mutex);
         char* data;
         int dataSize = 1024 * i;
@@ -73,6 +73,7 @@ void childrenProcess(char* sharedMemory){
 
         // Sending check
         pthread_cond_signal(&vacio);
+        i = i * 10;
 
         // Restart sequence
         if (i == 100000 && average > 0) {
@@ -87,7 +88,7 @@ void parentProcess(char* sharedMemory){
     long times [6] = {0, 0, 0, 0, 0, 0};
     int index = 0, average = 5;
 
-    for (int i = 1; i < 1000001; i = i * 10){
+    for (int i = 1; i < 1000001; ){
         char* data = generateData(i);
         gettimeofday(&start, 0);
 
@@ -104,6 +105,7 @@ void parentProcess(char* sharedMemory){
         if (average == 5) times[index] = newTime;
         else times[index] = ceil((times[index] + newTime)/2);
         index++;
+        i = i * 10;
 
         // Restart sequence
         if (index > 5 && average > 0) {
