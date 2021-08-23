@@ -106,7 +106,6 @@ void childProcess(){
         }
         count++;
     }
-    printf("%d\n", count);
 }
 
 void parentProcess(){
