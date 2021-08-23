@@ -22,7 +22,6 @@ struct client_data
 */
 void sendError(const char message[]){
     perror(message);
-    exit(EXIT_FAILURE);
 }
 
 void check(int exp, const char message[]){
