@@ -74,6 +74,8 @@ void printTimes(long* times){
             bigger = true;
         }
     }
+
+    printf("\n\n");
 }
 
 void checkErrors(int processId){

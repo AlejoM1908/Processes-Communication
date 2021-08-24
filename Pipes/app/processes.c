@@ -32,8 +32,7 @@ void printTimes(long *times){
     int fileSize = 1;
     bool bigger = false;
 
-    for (int i = 0; i < 6; i++)
-    {
+    for (int i = 0; i < 6; i++){
         if (bigger) printf("El tiempo para %dMB fue de %ld μs usando tuberias\n", fileSize, times[i]);
         else printf("El tiempo para %dKB fue de %ld μs usando tuberias\n", fileSize, times[i]);
 
@@ -43,6 +42,8 @@ void printTimes(long *times){
             bigger = true;
         }
     }
+
+    printf("\n\n");
 }
 
 void checkErrors(int processId, int pipesPointers[2]){

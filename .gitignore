@@ -2,3 +2,7 @@
 .fuse*
 Pipes/app/processes
 processes
+sharedMemory
+Pipes
+messagePassing
+Files

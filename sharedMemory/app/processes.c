@@ -45,6 +45,8 @@ void printTimes(long* times){
             bigger = true;
         }
     }
+
+    printf("\n\n");
 }
 
 void checkErrors(int processId, int mutexCheck, int vacioCheck, int llenoCheck){
