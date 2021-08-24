@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <stdarg.h>
 #define MAX_PROCESOS 1   
 
 // Program variables
@@ -22,8 +23,11 @@ char* generateData(int dataSize) {
     return data;
 }
 
-void errorMessage(const char *message){
-    printf(message);
+void errorMessage(const char *message, ...){
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
     exit(1);
 }
 
@@ -32,8 +36,8 @@ void printTimes(long* times){
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %ld μs usando memoria compartida\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %ld μs usando memoria compartida\n", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMB fue de %ld μs usando memoria compartida\n", fileSize, times[i]);
+        else printf("El tiempo para %dKB fue de %ld μs usando memoria compartida\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
         else {

@@ -93,7 +93,7 @@ ssize_t multi_write(int fd, const char *buffer, size_t nbytes){
 }
 
 void childProcess(int pipeWrite, int pipeRead){
-    int check = 1, average = 5;
+    int check = 1, average = 5, count = 0;
 
     for (int i = 1; i < 100001; ){
         size_t size = 1000 * i;
@@ -110,11 +110,13 @@ void childProcess(int pipeWrite, int pipeRead){
         // Sending check
         if (write(pipeWrite, &check, sizeof(check)) != sizeof(check))
             errorMessage("Write error in %s()\n", __func__);
+        count++;
         i = i * 10;
 
         // Restart sequence
-        if (i > 10000 && average > 0){
+        if (count > 5 && average > 0){
             average--;
+            count = 0;
             i = 1;
         }
     }

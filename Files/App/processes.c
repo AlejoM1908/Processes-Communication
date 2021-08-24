@@ -30,8 +30,8 @@ void printTimes(long* times){
     bool bigger = false;
 
     for (int i = 0; i < 6; i++){
-        if (bigger) printf("El tiempo para %dMb fue de %ld μs usando archivos\n", fileSize, times[i]);
-        else printf("El tiempo para %dKb fue de %ld μs usando archivos\n", fileSize, times[i]);
+        if (bigger) printf("El tiempo para %dMB fue de %ld μs usando archivos\n", fileSize, times[i]);
+        else printf("El tiempo para %dKB fue de %ld μs usando archivos\n", fileSize, times[i]);
 
         if (fileSize < 100) fileSize = fileSize * 10;
         else {
