@@ -37,7 +37,9 @@ La solución debe ser capaz de:
 
  ## Explicación de la solución desarrollada
 
-Pendiente de construcción
+Se construyeron cuatro programas por separado que implementaban cada uno una solución de comunicación entre procesos, cada programa generaba dos procesos emparentados que creaban sucesivamente cada paquete de datos requerido para la prueba y lo enviaba usando su método especifico. Este proceso de envío se realiza un total de cinco veces y se promedian los resultados obtenidos para mayor precisión.
+
+Finalmente un Bash Script se encarga de unir y automatizar todo en un programa único que despliega los tiempos promedio que le toma a cada programa hacer los envíos correspondientes de sus paquetes para realizar el análisis del método más eficiente de comunicación entre procesos.
 
 ## Participantes del desarrollo
 

@@ -97,14 +97,15 @@ void childProcess(){
         if (tbytes  != (ssize_t)size) errorMessage("Read error in %s()\n", __func__);
         if (send(socket, &check, sizeof(check), 0) == -1) 
             errorMessage("Error sending check value error: %s\n",strerror(errno));
+        count++;
         i = i * 10;
 
         // Restart sequence
-        if (i > 10000  && average > 0) {
+        if (count == 6  && average > 0) {
             average--;
+            count = 0;
             i = 1;
         }
-        count++;
     }
 }
 
@@ -123,7 +124,7 @@ void parentProcess(){
 
         // Sending Data Package to consumer
         if (multi_send(client.clientfd, data, size) != (ssize_t)size)
-            errorMessage("Write error in %s()\n", __func__);
+            errorMessage("Write error in %s(), error: %s\n", __func__, strerror(errno));
 
         if (read(client.clientfd, &dataCheck, sizeof(dataCheck)) == -1) 
             errorMessage("Error recibing check confirmation, error: %s\n",strerror(errno));
