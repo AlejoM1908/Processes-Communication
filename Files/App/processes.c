@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <math.h>
+#include <stdarg.h>
 #include "../util/file_manager.c"
 
 pthread_mutex_t mutex;
@@ -20,8 +21,11 @@ char* generateData(int dataSize) {
     return data;
 }
 
-void errorMessage(const char *message){
-    printf(message);
+void errorMessage(const char *message, ...){
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
     exit(1);
 }
 
